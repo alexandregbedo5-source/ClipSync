@@ -1,15 +1,19 @@
-# 📋 ClipSync — Presse-Papier Partagé Local (100% Hors-Ligne)
+# 📋 ClipSync — Presse-Papier Partagé Local (Texte, Liens & Images)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-black.svg?logo=node.js)](https://nodejs.org)
 
-**ClipSync** synchronise instantanément votre presse-papier (texte, liens, codes, snippets) en temps réel entre **PC (Windows / Mac / Linux)** et **Smartphone (iOS / Android)** sur votre réseau Wi-Fi local ou point d'accès mobile.
+**ClipSync** synchronise instantanément votre presse-papier (**texte, liens, captures d'écran, photos et images**) en temps réel entre **PC (Windows / Mac / Linux)** et **Smartphone (iOS / Android)** sur votre réseau Wi-Fi local ou point d'accès mobile.
 
-- **Zéro Cloud** : Tout reste strictement sur votre réseau local.
+- **Support complet des images** :
+  - Collez directement vos captures d'écran (`Ctrl+V` ou capture d'écran Windows).
+  - Cliquez sur **`[Copier l'image]`** pour l'écrire directement dans le presse-papier de votre système et la coller immédiatement dans Word, Photoshop, Discord, Paint ou WhatsApp !
+  - Joignez des photos depuis la galerie mobile ou l'appareil photo via le bouton `[🖼️ Image]`.
+- **Zéro Cloud** : Tout reste strictement sur votre réseau local sans transiter par Internet.
 - **Zéro Application à installer** : S'ouvre directement dans le navigateur du smartphone via un QR Code.
 - **Synchronisation bidirectionnelle instantanée** via WebSocket (< 5 ms de latence).
 - **Détection intelligente des URLs** avec bouton d'ouverture directe.
-- **Historique complet** avec copie en 1 clic.
+- **Sélecteur d'adresse IP automatique** (support du Point d'accès Hotspot `192.168.137.1` et Wi-Fi local).
 
 ---
 
@@ -40,7 +44,7 @@ L'application démarre sur `http://localhost:6060`.
 
 1. Connectez votre PC et votre smartphone au même réseau Wi-Fi ou au partage de connexion.
 2. Cliquez sur **"Scanner"** sur votre PC et flashez le QR Code avec votre smartphone.
-3. Copiez ou tapez du texte sur l'un des appareils : il apparaît instantanément sur l'autre avec un bouton **"Copier"** !
+3. Copiez, collez ou joignez du texte et des images : ils apparaissent instantanément sur l'autre appareil !
 
 ---
 

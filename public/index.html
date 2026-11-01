@@ -33,13 +33,24 @@
       <!-- Input Card -->
       <section class="composer-card">
         <div class="composer-header">
-          <span class="section-tag">[ENVOYER DU TEXTE OU UN LIEN]</span>
+          <span class="section-tag">[ENVOYER DU TEXTE, UN LIEN OU UNE IMAGE]</span>
           <span class="emoticon" id="device-emoticon">(-_-) [PC]</span>
         </div>
-        <textarea id="clip-input" placeholder="Tapez ou collez du texte, un code, une URL... (Ctrl+Entrée pour envoyer)" rows="3"></textarea>
+        <textarea id="clip-input" placeholder="Tapez ou collez du texte, une URL ou une image (Ctrl+V pour coller, Ctrl+Entrée pour envoyer)" rows="3"></textarea>
+        
+        <!-- Image Preview if an image is staged -->
+        <div id="image-staging" class="image-staging hidden">
+          <img id="staged-img-preview" src="" alt="Aperçu">
+          <button id="remove-staged-img-btn" class="close-btn" title="Retirer l'image">&times;</button>
+        </div>
+
         <div class="composer-actions">
           <button id="paste-btn" class="secondary-btn" title="Coller depuis le presse-papier">
             📋 Coller
+          </button>
+          <input type="file" id="image-input" accept="image/*" style="display: none;">
+          <button id="upload-img-btn" class="secondary-btn" title="Joindre une image ou capture">
+            🖼️ Image
           </button>
           <div class="spacer"></div>
           <button id="send-btn" class="action-btn">
@@ -86,6 +97,10 @@
           <button class="close-btn" id="close-qr-modal">&times;</button>
         </div>
         <div class="modal-body">
+          <div class="network-select-box">
+            <label for="ip-select" class="section-tag">Choisir l'adresse réseau :</label>
+            <select id="ip-select" class="ip-dropdown"></select>
+          </div>
           <div class="qr-box">
             <img id="qr-img" src="" alt="QR Code">
           </div>
@@ -93,7 +108,7 @@
             Scannez ce code avec votre smartphone connecté au même réseau ou au point d'accès.
           </p>
           <div class="input-group">
-            <input type="text" id="server-url-input" readonly value="http://...">
+            <input type="text" id="server-url-input" value="http://...">
             <button id="copy-url-btn" class="copy-btn">Copier</button>
           </div>
         </div>

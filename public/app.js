@@ -1,8 +1,9 @@
-// ClipSync — Client Presse-Papier Partagé
+// ClipSync — Client Presse-Papier Partagé (Texte, Liens & Images)
 
 const state = {
   deviceType: 'PC',
   clips: [],
+  stagedImage: null,
   serverUrl: window.location.origin
 };
 
@@ -10,6 +11,11 @@ const dom = {
   clipInput: document.getElementById('clip-input'),
   sendBtn: document.getElementById('send-btn'),
   pasteBtn: document.getElementById('paste-btn'),
+  imageInput: document.getElementById('image-input'),
+  uploadImgBtn: document.getElementById('upload-img-btn'),
+  imageStaging: document.getElementById('image-staging'),
+  stagedImgPreview: document.getElementById('staged-img-preview'),
+  removeStagedImgBtn: document.getElementById('remove-staged-img-btn'),
   latestCard: document.getElementById('latest-card'),
   latestContent: document.getElementById('latest-content'),
   latestSender: document.getElementById('latest-sender'),
@@ -26,6 +32,7 @@ const dom = {
   serverUrlInput: document.getElementById('server-url-input'),
   copyUrlBtn: document.getElementById('copy-url-btn'),
   clearBtn: document.getElementById('clear-btn'),
+  ipSelect: document.getElementById('ip-select'),
   toast: document.getElementById('toast'),
   toastMessage: document.getElementById('toast-message')
 };
@@ -56,14 +63,13 @@ function showToast(msg, duration = 2500) {
   }, duration);
 }
 
-// Copy to clipboard helper
+// Copy text helper
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
     playBeep();
     showToast('[OK] Copié dans le presse-papier !');
   } catch (err) {
-    // Fallback for older browsers / insecure context
     const textarea = document.createElement('textarea');
     textarea.value = text;
     document.body.appendChild(textarea);
@@ -75,12 +81,53 @@ async function copyToClipboard(text) {
   }
 }
 
+// Convert image blob to PNG for universal clipboard write
+function convertBlobToPng(blob) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(resolve, 'image/png');
+    };
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+// Copy Image directly to OS clipboard
+async function copyImageToClipboard(dataUrl) {
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const pngBlob = blob.type === 'image/png' ? blob : await convertBlobToPng(blob);
+
+    await navigator.clipboard.write([
+      new ClipboardItem({ 'image/png': pngBlob })
+    ]);
+    playBeep();
+    showToast('[OK] Image copiée dans le presse-papier !');
+  } catch (err) {
+    console.warn('Erreur écriture image clipboard:', err);
+    // Fallback: download the image
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `clipsync_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    playBeep();
+    showToast('[OK] Image enregistrée');
+  }
+}
+
 // Detect if string is a URL
 function isUrl(str) {
   return /^https?:\/\/[^\s]+$/i.test(str.trim());
 }
 
-// Format relative timestamp
 function formatTime(timestamp) {
   const diffSec = Math.floor((Date.now() - timestamp) / 1000);
   if (diffSec < 5) return "à l'instant";
@@ -151,7 +198,7 @@ function renderClips() {
 
   if (state.clips.length === 0) {
     dom.latestCard.classList.add('hidden');
-    dom.historyList.innerHTML = '<p class="empty-state">Le presse-papier est vide. Copiez ou envoyez un premier texte !</p>';
+    dom.historyList.innerHTML = '<p class="empty-state">Le presse-papier est vide. Copiez un texte ou une image !</p>';
     return;
   }
 
@@ -159,29 +206,51 @@ function renderClips() {
   const latest = state.clips[0];
   dom.latestCard.classList.remove('hidden');
   dom.latestSender.textContent = `[${latest.sender}] • ${formatTime(latest.timestamp)}`;
-  dom.latestContent.textContent = latest.content;
-  dom.latestCopyBtn.onclick = () => copyToClipboard(latest.content);
 
-  if (isUrl(latest.content)) {
-    dom.latestOpenBtn.href = latest.content.trim();
-    dom.latestOpenBtn.classList.remove('hidden');
-  } else {
+  if (latest.kind === 'image') {
+    dom.latestContent.innerHTML = `<img src="${latest.content}" class="clip-image-preview" alt="Image">`;
+    dom.latestCopyBtn.textContent = "Copier l'image";
+    dom.latestCopyBtn.onclick = () => copyImageToClipboard(latest.content);
     dom.latestOpenBtn.classList.add('hidden');
+  } else {
+    dom.latestContent.textContent = latest.content;
+    dom.latestCopyBtn.textContent = 'Copier dans le presse-papier';
+    dom.latestCopyBtn.onclick = () => copyToClipboard(latest.content);
+
+    if (isUrl(latest.content)) {
+      dom.latestOpenBtn.href = latest.content.trim();
+      dom.latestOpenBtn.classList.remove('hidden');
+    } else {
+      dom.latestOpenBtn.classList.add('hidden');
+    }
   }
 
   // Render history list
-  dom.historyList.innerHTML = state.clips.map((clip, index) => {
-    const hasUrl = isUrl(clip.content);
+  dom.historyList.innerHTML = state.clips.map((clip) => {
+    const isImg = clip.kind === 'image';
+    const hasUrl = !isImg && isUrl(clip.content);
+
+    let contentHtml = '';
+    if (isImg) {
+      contentHtml = `<img src="${clip.content}" class="clip-image-preview" alt="Image reçue">`;
+    } else {
+      contentHtml = escapeHtml(clip.content);
+    }
+
     return `
       <div class="history-item" data-id="${clip.id}">
         <div class="history-item-top">
-          <span>[${clip.sender}]</span>
+          <span>[${clip.sender}] ${isImg ? '• [IMAGE]' : ''}</span>
           <span>${formatTime(clip.timestamp)}</span>
         </div>
-        <div class="history-item-body">${escapeHtml(clip.content)}</div>
+        <div class="history-item-body">${contentHtml}</div>
         <div class="history-item-actions">
           ${hasUrl ? `<a href="${encodeURI(clip.content.trim())}" target="_blank" rel="noopener" class="item-action-btn">Ouvrir ↗</a>` : ''}
-          <button class="item-action-btn copy-item-btn" data-text="${encodeURIComponent(clip.content)}">Copier</button>
+          ${isImg 
+            ? `<button class="item-action-btn copy-img-btn" data-id="${clip.id}">Copier l'image</button>
+               <a href="${clip.content}" download="image_${clip.id}.png" class="item-action-btn">Télécharger</a>`
+            : `<button class="item-action-btn copy-text-btn" data-text="${encodeURIComponent(clip.content)}">Copier</button>`
+          }
           <button class="item-action-btn item-delete-btn" data-id="${clip.id}">Supprimer</button>
         </div>
       </div>
@@ -189,8 +258,15 @@ function renderClips() {
   }).join('');
 
   // Attach event listeners to items
-  dom.historyList.querySelectorAll('.copy-item-btn').forEach(btn => {
+  dom.historyList.querySelectorAll('.copy-text-btn').forEach(btn => {
     btn.onclick = () => copyToClipboard(decodeURIComponent(btn.dataset.text));
+  });
+
+  dom.historyList.querySelectorAll('.copy-img-btn').forEach(btn => {
+    btn.onclick = () => {
+      const clip = state.clips.find(c => c.id === btn.dataset.id);
+      if (clip) copyImageToClipboard(clip.content);
+    };
   });
 
   dom.historyList.querySelectorAll('.item-delete-btn').forEach(btn => {
@@ -208,8 +284,68 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Send current text from textarea
+// Stage an image in composer
+function stageImage(dataUrl) {
+  state.stagedImage = dataUrl;
+  dom.stagedImgPreview.src = dataUrl;
+  dom.imageStaging.classList.remove('hidden');
+}
+
+function clearStagedImage() {
+  state.stagedImage = null;
+  dom.stagedImgPreview.src = '';
+  dom.imageStaging.classList.add('hidden');
+  dom.imageInput.value = '';
+}
+
+dom.removeStagedImgBtn.onclick = clearStagedImage;
+
+// Image file upload
+dom.uploadImgBtn.onclick = () => dom.imageInput.click();
+
+dom.imageInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (ev) => stageImage(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+};
+
+// Global Paste Event (Captures screenshots, images or text anywhere)
+window.addEventListener('paste', (e) => {
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        stageImage(ev.target.result);
+        showToast('[+] Image capturée depuis le presse-papier');
+      };
+      reader.readAsDataURL(file);
+      e.preventDefault();
+      return;
+    }
+  }
+});
+
+// Send current text or staged image
 function sendCurrentClip() {
+  if (state.stagedImage) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'clip',
+        content: state.stagedImage,
+        sender: state.deviceType,
+        kind: 'image'
+      }));
+      clearStagedImage();
+      showToast('[OK] Image envoyée');
+    }
+    return;
+  }
+
   const content = dom.clipInput.value.trim();
   if (!content) return;
 
@@ -227,7 +363,6 @@ function sendCurrentClip() {
   }
 }
 
-// Event Listeners
 dom.sendBtn.onclick = sendCurrentClip;
 
 dom.clipInput.onkeydown = (e) => {
@@ -240,6 +375,23 @@ dom.clipInput.onkeydown = (e) => {
 // Paste from clipboard button
 dom.pasteBtn.onclick = async () => {
   try {
+    // Try reading items (images first)
+    if (navigator.clipboard.read) {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(type => type.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const reader = new FileReader();
+          reader.onload = (ev) => stageImage(ev.target.result);
+          reader.readAsDataURL(blob);
+          showToast('[+] Image collée');
+          return;
+        }
+      }
+    }
+
+    // Otherwise read text
     const text = await navigator.clipboard.readText();
     if (text) {
       dom.clipInput.value = text;
@@ -269,17 +421,53 @@ dom.copyUrlBtn.onclick = () => {
   copyToClipboard(dom.serverUrlInput.value);
 };
 
-// Fetch initial network info
-async function initNetworkInfo() {
+// Network info with dynamic IP selector
+async function initNetworkInfo(targetIp = null) {
   try {
-    const res = await fetch('/api/info');
+    const url = targetIp ? `/api/info?ip=${encodeURIComponent(targetIp)}` : '/api/info';
+    const res = await fetch(url);
     const data = await res.json();
     state.serverUrl = data.url;
     dom.serverUrlInput.value = data.url;
     dom.qrImg.src = data.qrCode;
+
+    if (dom.ipSelect && dom.ipSelect.options.length === 0 && data.interfaces) {
+      data.interfaces.forEach(iface => {
+        const opt = document.createElement('option');
+        opt.value = iface.address;
+        opt.textContent = iface.label || `${iface.name} (${iface.address})`;
+        if (iface.address === (data.selectedIp || data.primaryIp)) opt.selected = true;
+        dom.ipSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = 'custom';
+      customOpt.textContent = 'Saisir une adresse IP manuellement...';
+      dom.ipSelect.appendChild(customOpt);
+
+      dom.ipSelect.onchange = (e) => {
+        if (e.target.value === 'custom') {
+          const customIp = prompt("Entrez l'adresse IP de votre PC (ex: 192.168.1.30 ou 192.168.137.1) :");
+          if (customIp && customIp.trim()) {
+            initNetworkInfo(customIp.trim());
+          }
+        } else {
+          initNetworkInfo(e.target.value);
+        }
+      };
+    }
   } catch (err) {
     console.warn('Erreur info réseau:', err);
   }
+}
+
+if (dom.serverUrlInput) {
+  dom.serverUrlInput.onchange = () => {
+    try {
+      const u = new URL(dom.serverUrlInput.value);
+      initNetworkInfo(u.hostname);
+    } catch (e) {}
+  };
 }
 
 window.addEventListener('DOMContentLoaded', () => {

@@ -46,7 +46,11 @@ function getLocalIPs() {
         );
         const isWiFi = lowerName.includes('wi-fi') || lowerName.includes('wireless') || lowerName.includes('wlan');
 
-        addresses.push({ name, address: iface.address, isHotspot, isWiFi });
+        const label = isHotspot 
+          ? `Point d'accès Hotspot (${iface.address})`
+          : (isWiFi ? `Wi-Fi (${iface.address})` : `Réseau local - ${name} (${iface.address})`);
+
+        addresses.push({ name, address: iface.address, isHotspot, isWiFi, label });
       }
     }
   }
@@ -82,14 +86,15 @@ const server = http.createServer((req, res) => {
   // Network info & QR Code
   if (pathname === '/api/info') {
     const ips = getLocalIPs();
-    const primaryIp = ips[0] ? ips[0].address : '127.0.0.1';
+    const requestedIp = parsedUrl.searchParams.get('ip');
+    const primaryIp = requestedIp || (ips[0] ? ips[0].address : '127.0.0.1');
     const serverUrl = `http://${primaryIp}:${PORT}`;
 
     QRCode.toDataURL(serverUrl, { margin: 1, width: 256 }, (err, qrDataUrl) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         url: serverUrl,
-        primaryIp,
+        selectedIp: primaryIp,
         interfaces: ips,
         qrCode: qrDataUrl,
         history: clipboardHistory
