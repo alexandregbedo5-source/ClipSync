@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ClipSync — Presse-Papier Partagé</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#09090b">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-tag">//</span>
+        <span class="logo-text">ClipSync</span>
+        <span class="badge" id="client-badge">[1 connecté]</span>
+      </div>
+      <div class="header-actions">
+        <button id="qr-btn" class="nav-btn" title="QR Code de connexion">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="7" y1="7" x2="7.01" y2="7"/><line x1="18" y1="7" x2="18.01" y2="7"/><line x1="7" y1="18" x2="7.01" y2="18"/><line x1="18" y1="18" x2="18.01" y2="18"/></svg>
+          <span>Scanner</span>
+        </button>
+        <button id="clear-btn" class="nav-btn" title="Effacer l'historique">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Vider</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Input Card -->
+      <section class="composer-card">
+        <div class="composer-header">
+          <span class="section-tag">[ENVOYER DU TEXTE OU UN LIEN]</span>
+          <span class="emoticon" id="device-emoticon">(-_-) [PC]</span>
+        </div>
+        <textarea id="clip-input" placeholder="Tapez ou collez du texte, un code, une URL... (Ctrl+Entrée pour envoyer)" rows="3"></textarea>
+        <div class="composer-actions">
+          <button id="paste-btn" class="secondary-btn" title="Coller depuis le presse-papier">
+            📋 Coller
+          </button>
+          <div class="spacer"></div>
+          <button id="send-btn" class="action-btn">
+            Envoyer ➔
+          </button>
+        </div>
+      </section>
+
+      <!-- Active / Latest Clip Banner -->
+      <section id="latest-card" class="latest-card hidden">
+        <div class="latest-header">
+          <span class="latest-tag">[DERNIER ÉLÉMENT SYNCHRONISÉ]</span>
+          <span id="latest-sender" class="sender-badge">[PC]</span>
+        </div>
+        <div id="latest-content" class="latest-content"></div>
+        <div class="latest-footer">
+          <button id="latest-copy-btn" class="action-btn-sm">
+            Copier dans le presse-papier
+          </button>
+          <a id="latest-open-btn" class="action-btn-sm link-btn hidden" target="_blank" rel="noopener">
+            Ouvrir l'URL ↗
+          </a>
+        </div>
+      </section>
+
+      <!-- History Section -->
+      <section class="history-section">
+        <div class="history-header">
+          <span class="section-tag">[HISTORIQUE DU PRESSE-PAPIER]</span>
+          <span id="history-count" class="history-count">0 élément</span>
+        </div>
+        <div id="history-list" class="history-list">
+          <p class="empty-state">Le presse-papier est vide. Copiez ou envoyez un premier texte !</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal QR Code -->
+    <div id="qr-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Connecter un smartphone</h3>
+          <button class="close-btn" id="close-qr-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="qr-box">
+            <img id="qr-img" src="" alt="QR Code">
+          </div>
+          <p class="modal-hint">
+            Scannez ce code avec votre smartphone connecté au même réseau ou au point d'accès.
+          </p>
+          <div class="input-group">
+            <input type="text" id="server-url-input" readonly value="http://...">
+            <button id="copy-url-btn" class="copy-btn">Copier</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+      <span id="toast-message">Message</span>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
